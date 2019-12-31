@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-type" content="application/x-www-form-urlencoded; charset=UTF-8"/>
+<style>
+/* Include the padding and border in an element's total width and height */
+* {
+  box-sizing: border-box;
+}
+
+/* Remove margins and padding from the list */
+ul {
+  margin: 0;
+  padding: 0;
+}
+
+/* Style the list items */
+ul li {
+  cursor: pointer;
+  position: relative;
+  padding: 12px 8px 12px 40px;
+  background: #eee;
+  font-size: 18px;
+  transition: 0.2s;
+
+  /* make the list items unselectable */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Set all odd list items to a different color (zebra-stripes) */
+ul li:nth-child(odd) {
+  background: #f9f9f9;
+}
+
+/* Darker background-color on hover */
+ul li:hover {
+  background: #ddd;
+}
+
+/* When clicked on, add a background color and strike out text */
+ul li.checked {
+  background: #888;
+  color: #fff;
+  text-decoration: line-through;
+}
+
+/* Add a "checked" mark when clicked on */
+ul li.checked::before {
+  content: '';
+  position: absolute;
+  border-color: #fff;
+  border-style: solid;
+  border-width: 0 2px 2px 0;
+  top: 10px;
+  left: 16px;
+  transform: rotate(45deg);
+  height: 15px;
+  width: 7px;
+}
+
+/* Style the close button */
+.close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  padding: 12px 16px 12px 16px;
+}
+
+.close:hover {
+  background-color: #f44336;
+  color: white;
+}
+
+/* Style the header */
+.header {
+  background-color: #f44336;
+  padding: 30px 40px;
+  color: white;
+  text-align: center;
+}
+
+/* Clear floats after the header */
+.header:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Style the input */
+input {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  width: 75%;
+  padding: 10px;
+  float: left;
+  font-size: 16px;
+}
+
+/* Style the "Add" button */
+.addBtn {
+  padding: 10px;
+  width: 25%;
+  background: #d9d9d9;
+  color: #555;
+  float: left;
+  text-align: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
+  border-radius: 0;
+}
+
+.addBtn:hover {
+  background-color: #bbb;
+}
+
+/* Anwar Styles */
+.pastdue {font-size:10px; float:right; display:inline-block; margin-right:50px}
+</style>
+<script>
+	 /* RESOURCES */
+	 /* https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage */
+	 
+    /* Custom Functions by Anwar Baksh */
+	function storeTasks(name, value, Storage) {
+		// Check browser support
+		if (typeof(Storage) !== "undefined") {
+		  // Store
+		  localStorage.setItem(name, JSON.stringify(value));
+		} else {
+		  document.getElementById("myUL").innerHTML = "<li>Sorry, your browser does not support Web Storage...<li>";
+		}	
+		//localStorage.removeItem("lastname");
+	}
+	
+	function setupStorage(Storage, inputValue) {
+		/* grab all current tasks - then add new item into storage - ignoring sort at this point */
+		var theTasks = getTasks(Storage);
+		var created = 'created:' + Date.now() + '';
+
+		if(theTasks != null) { theTasks[parseFloat(theTasks.length)] = [inputValue, created];} 
+		else { theTasks = [[inputValue, created]];}
+		
+		storeTasks("tasks", theTasks, Storage);
+	}
+	
+	function getTasks(Storage) { 
+		var storedTasks = localStorage.getItem("tasks");
+		var theTasks = JSON.parse(storedTasks);
+		return theTasks;
+	}
+	
+	function prepopulate_tasks(Storage) {
+		var theTasks = getTasks(Storage);
+		if(theTasks != null) {
+		document.getElementById("myUL").innerHTML = ""; //clear it
+		theTasks.forEach(popInLi);
+		}
+	}
+	
+	/**
+	 * Rebuild in Storage after an action
+	 */
+	function rebuild_tasks(realtaskid, status, visibility) {
+		var theTasks = getTasks(Storage);
+		if(theTasks != null) {
+		 theTasks.forEach(function(item, index) {
+		  var completionDate = Date.now();
+		  var setstatus = "";
+		  if(status == "completed") {setstatus = status;}
+		  if(status == 'bypass' && item[3] != "undefined") {setstatus = item[3];} // can't know original status here
+		  if(setstatus == null) {setstatus = "";}
+		  
+		  if(realtaskid == index) {theTasks[index] = [item[0], item[1], completionDate, setstatus, visibility];} else {theTasks[index] = item;}
+		  //console.log(realtaskid + "-" + index);
+		 });
+		  //console.log(theTasks);
+		 storeTasks("tasks", theTasks, Storage);
+		}
+	}
+
+	function getDaysfromCreation(creationdate) {
+		// 1576632714633 - creation date for testing
+		var nowtimeinseconds = (Date.now()/1000);
+		var creationtimeinseconds = (parseFloat(creationdate)/1000);
+		var differencebetween = (nowtimeinseconds - creationtimeinseconds);
+		var daysfromcreation = (((differencebetween/60)/60)/24);
+		return daysfromcreation;
+	}
+		
+	function extractTaskId(fullid) {
+		var itemid_parts = fullid.split('_'); 
+		var itemid = itemid_parts[1]; 
+		if(itemid) {return itemid;} else {return false;}
+	}
+	
+	function daysAgo(creationdate) {
+			var daysago = creationdate.split(':'); daysago = daysago[1];
+			var daysbehind = Math.round(getDaysfromCreation(daysago)); return daysbehind;
+	}
+	
+	function popInLi(item, index) {
+
+		var task = "";
+		var creationdate = "";
+		var status = "";
+		var viblestyle = ""; 
+		var daysbehind = 0;
+		
+		if (typeof item === 'string') { task = item; } 
+		else { 
+			task = item[0];
+			creationdate = item[1];
+			daysbehind = daysAgo(creationdate);
+			
+			if(item[3] != "undefined" && item[3] == "completed") { status = "checked"; daysbehind = 0;}
+			if(item[4] != "undefined" && item[4] == "hide") { viblestyle = "display:none";}
+		}
+		
+		// original // document.getElementById("myUL").innerHTML += index + "<li>" + item + "<span class='close'>\u00D7</span></li><br>";
+		document.getElementById("myUL").innerHTML += "<li id='tsk_" + index + "' class='" + status + "' style='" + viblestyle + "'>" + task + "&nbsp;&nbsp;&nbsp;<span class='pastdue'>" + daysbehind + " days</span><span class='close'>\u00D7</span></li>";
+        
+		// Click on a close button to hide the current list item
+		var close = document.getElementsByClassName("close");
+		var i;
+		for (i = 0; i < close.length; i++) { 
+			close[i].onclick = function(event) { event.stopPropagation();
+			  var div = this.parentElement;
+			  var itemid = extractTaskId(this.parentElement.id);
+			  rebuild_tasks(itemid, 'bypass', 'hide'); // ignore status
+			  div.style.display = "none";
+			}
+		}
+
+	}	
+		
+	// Create a new list item when clicking on the "Add" button
+	function newElement(Storage) {
+	  var li = document.createElement("li");
+	  var inputValue = document.getElementById("myInput").value;
+	  var t = document.createTextNode(inputValue);
+	  li.appendChild(t);
+	  if (inputValue === '') {
+		alert("You must write something!");
+	  } else {
+		document.getElementById("myUL").appendChild(li);   
+		/* added by Anwar Baksh */
+		setupStorage(Storage, inputValue);
+	  }
+	  document.getElementById("myInput").value = "";
+	
+	  var span = document.createElement("SPAN");
+	  var txt = document.createTextNode("\u00D7");
+	  span.className = "close";
+	  span.appendChild(txt);   
+	  li.appendChild(span);
+	  
+	  prepopulate_tasks(Storage);
+	  
+	  
+	  // this is probably useless - repopulate function call above attaches the events to each li item
+	  for (i = 0; i < close.length; i++) {
+		close[i].onclick = function() {
+		  var div = this.parentElement;
+		  div.style.display = "none";
+		  /* Added by Anwar Baksh */
+		  var itemid = extractTaskId(this.parentElement.id);
+		  rebuild_tasks(itemid, 'bypass', 'hide'); // ignore status
+		}
+	  }
+	}
+
+</script>
+</head>
+<body>
+ <div id="myDIV" class="header">
+  <h2>Private ToDo</h2>
+  <p><strong>a private todo list that uses browser storage.</strong></p>
+
+  <input type="text" id="myInput" placeholder="Title...">
+  <span onclick="newElement(Storage)" class="addBtn">Add</span>
+ </div>
+<div id="myTest"></div>
+<ul id="myUL">
+
+</ul> 
+<script>
+	
+	/* FROM WE3SCHOOLS */
+	
+	/* ADD THE HIDE/DELETE TRIGGER */
+	// Create a "close" button and append it to each list item
+	var myNodelist = document.getElementsByTagName("LI");
+	var i;
+	for (i = 0; i < myNodelist.length; i++) {
+	  var span = document.createElement("SPAN");
+	  var txt = document.createTextNode("\u00D7");
+	  span.className = "close";
+	  span.appendChild(txt);
+	  myNodelist[i].appendChild(span);
+	}
+	
+	
+	/* MARK AS COMPLETED */
+	// Add a "checked" symbol when clicking on a list item
+	var list = document.querySelector('ul');
+	//var list = document.getElementById('myUL');
+	list.addEventListener('click', function(ev) {
+	  if (ev.target.tagName === 'LI') {
+
+		ev.target.classList.toggle('checked');
+
+        var status;
+		var liclass = ev.target.classList; /* Get result of Toggle - we don't know for sure */
+		if(liclass == "checked") {status = 'completed';} else {status = '';} /* for local storage */ 
+		
+		var realtaskid = extractTaskId(ev.target.id);
+		rebuild_tasks(realtaskid, status, 'show'); console.log(ev.target.id);
+		// we have to rebuild the list for every action on the list. Unless we go with individual row entries for each line item. Instead of a complex array.
+	  }
+	}, false);
+	
+	/* HIDE/DELETE */	
+	// Click on a close button to hide the current list item
+	var close = document.getElementsByClassName("close");
+	var i;
+	for (i = 0; i < close.length; i++) {
+	  close[i].onclick = function(event) {
+		var div = this.parentElement;
+		//div.style.display = "none";
+		/* Added by Anwar Baksh */
+		var itemid = extractTaskId(this.parentElement.id);
+		rebuild_tasks(itemid, 'bypass', 'hide'); // ignore status
+	  }
+	}
+	
+	
+	/* Let's pull tasks from web storage and setup LI list */
+	prepopulate_tasks(Storage);
+	
+	/**
+	 * DONE: setup a method for updating meta data of Task when checked as done or deleted (hide)
+	 * DONE: setup a method to record creation date and complete date.
+	 * DONE: setup a method to calculate difference in days from creation.
+	 * DONE: when creating new list, then checking off item as complete, rebuild function updates wrong index.
+	 * DONE: clicking close button changes status of compelted item to blank status or null - becuase event is bubbling to parent - tried a few fixes but nothing worked so far.
+	 * DONE: make sure each li id is set when created and repopulated
+	 * DONE: clicking close button on item that is not completed passes null to storage
+	 * DONE: if completed date is set - dont show days from creation (total outstanding days)
+	 */
+	
+    
+</script>
+</body>
+</html>
